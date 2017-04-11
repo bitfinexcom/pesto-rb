@@ -7,6 +7,7 @@ module Pesto
       raise 'ERR_REDIS_NOTFOUND' if @ctx[:redis].nil?
 
       @conf = {
+        :lock_expire => false,
         :timeout_concurrency_expire => 60,
         :timeout_lock_expire => 300,
         :timeout_lock => 90,
@@ -68,22 +69,17 @@ module Pesto
       t_start = Time.now
 
       while locked_old
-        locked_old = rc.get(chash) 
-
-        if locked_old.nil?
-          is_set = rc.setnx chash, 1
-          if is_set
+        is_set = rc.setnx chash, 1
+        
+        if is_set
+          if @conf[:lock_expire]
             rc.expire chash, opts[:timeout_lock_expire]
-            locked_old = nil
-            break
-          else
-            locked_old = 1
           end
-        else
-          locked_old = 1
+          locked_old = nil
+          break
         end
 
-        break if locked_old.nil? || (Time.now - t_start) > opts[:timeout_lock]
+        break if (Time.now - t_start) > opts[:timeout_lock]
         sleep opts[:interval_check]
       end
 
@@ -119,10 +115,12 @@ module Pesto
 
       names.each do |n|
         l = lock(n, opts)
+  
         if l != 1
           valid = false
           break
         end
+  
         locks << n
       end
 
@@ -134,7 +132,7 @@ module Pesto
     end
 
     def unlock(name)
-      rc.del lock_hash(name)
+      rc.del(lock_hash(name))
     end
 
     def unlockm(_names)
