@@ -19,7 +19,7 @@ def lock(pfx, pid = 0)
 
   keys.shuffle!
 
-  locked = pl.lockm(keys, { :timeout_lock => 0.005 })
+  locked = pl.lockm(keys, { :timeout_lock => 0.005, :interval_check => 0.005 })
 
   if locked == 1
     puts "[#{pid}] lock acquired"
