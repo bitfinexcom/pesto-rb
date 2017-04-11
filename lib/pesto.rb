@@ -10,8 +10,8 @@ module Pesto
         :timeout_concurrency_expire => 60,
         :timeout_lock_expire => 300,
         :timeout_lock => 90,
-        :interval_check => 0.1,
-        :concurrency_limit => 3
+        :interval_check => 0.05,
+        :concurrency_limit => 0
       }.merge(opts)
 
     end
