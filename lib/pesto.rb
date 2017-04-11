@@ -23,7 +23,7 @@ module Pesto
 
     def get_concurrency(name)
       hash = ccc_hash(name) 
-      res = @ctx[:redis].get(hash) || 0
+      res = rc.get(hash) || 0
       res.to_i
     end
 
@@ -68,12 +68,12 @@ module Pesto
       t_start = Time.now
 
       while locked_old
-        locked_old = @ctx[:redis].get(chash) 
+        locked_old = rc.get(chash) 
 
         if locked_old.nil?
-          is_set = @ctx[:redis].setnx chash, 1
+          is_set = rc.setnx chash, 1
           if is_set
-            @ctx[:redis].expire chash, opts[:timeout_lock_expire]
+            rc.expire chash, opts[:timeout_lock_expire]
             locked_old = nil
             break
           else
@@ -134,7 +134,7 @@ module Pesto
     end
 
     def unlock(name)
-      @ctx[:redis].del lock_hash(name)
+      rc.del lock_hash(name)
     end
 
     def unlockm(_names)
