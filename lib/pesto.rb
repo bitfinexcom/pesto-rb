@@ -138,9 +138,11 @@ module Pesto
     def unlockm(_names)
       names = _names.uniq
       val = 0
+
       names.each do |n|
         val += unlock(n)
       end
+      
       val > 0 ? 1 : 0
     end
 

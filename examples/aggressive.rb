@@ -4,7 +4,7 @@ require 'securerandom'
 require_relative '../lib/pesto.rb'
 
 $key_num = 2
-$concurrency = 3
+$concurrency = 4
 
 def lock(ctx, pfx, pid = 0)
   pl = Pesto::Lock.new({ :redis => ctx[:redis], :verbose => true })
@@ -23,8 +23,10 @@ def lock(ctx, pfx, pid = 0)
   locked = pl.lockm(keys, { :timeout_lock => 0.005, :interval_check => 0.005 })
 
   if locked == 1
-    puts "[#{pid}] lock acquired (took: #{(Time.now - d1) * 1000}ms)"
     pl.unlockm(keys)
+    puts "[#{pid}] lock acquired/dismissed (took: #{(Time.now - d1) * 1000}ms)"
+  else
+    puts "[#{pid}] lock failed"
   end
 end
 
@@ -44,7 +46,7 @@ Signal.trap('TERM')  { killall(children) }
 for pid in 0..$concurrency
   puts "[#{pid}] fork"
   children << fork do
-    redis = Redis.new
+    redis = Redis.new(:driver => :hiredis)
     while true do
       lock({ :redis => redis }, pfx, pid)
       delay = rand(1000).to_f / 10000.0
