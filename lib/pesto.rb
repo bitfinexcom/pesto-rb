@@ -11,9 +11,14 @@ module Pesto
         :timeout_lock_expire => 300,
         :timeout_lock => 90,
         :interval_check => 0.05,
-        :concurrency_limit => 0
+        :concurrency_limit => 0,
+        :concurrency_count => false
       }.merge(opts)
 
+    end
+
+    def rc
+      @ctx[:redis]
     end
 
     def get_concurrency(name)
@@ -24,30 +29,38 @@ module Pesto
 
     def incr_concurrency(name)
       hash = ccc_hash(name) 
-      @ctx[:redis].incr(hash)
-      @ctx[:redis].expire(hash, @conf[:timeout_concurrency_expire])
+
+      rc.pipelined do
+        rc.incr(hash)
+        rc.expire(hash, @conf[:timeout_concurrency_expire])
+      end
     end
 
     def decr_concurrency(name)
       hash = ccc_hash(name) 
-      @ctx[:redis].decr(hash)
-      @ctx[:redis].expire(hash, @conf[:timeout_concurrency_expire])
+      rc.pipelined do
+        rc.decr(hash)
+        rc.expire(hash, @conf[:timeout_concurrency_expire])
+      end
     end
 
     def lock(name = 'global', _opts = {})
       opts = {}.merge(
         @conf.select{ |k| [
-          :timeout_lock_expire, :timeout_lock, :interval_check, :concurrency_limit
+          :timeout_lock_expire, :timeout_lock,
+          :interval_check, :concurrency_limit
         ].include?(k) 
         }
       ).merge(_opts || {})
 
-      if opts[:concurrency_limit] > 0
-        ccc = get_concurrency(name)
-        return 0 if ccc > opts[:concurrency_limit]
-      end
+      if @conf[:concurrency_count]
+        if opts[:concurrency_limit] > 0
+          ccc = get_concurrency(name)
+          return 0 if ccc > opts[:concurrency_limit]
+        end
 
-      incr_concurrency(name)
+        incr_concurrency(name)
+      end
 
       chash = lock_hash(name)
       locked_old = 1
@@ -70,11 +83,13 @@ module Pesto
           locked_old = 1
         end
 
-        break if (Time.now - t_start) > opts[:timeout_lock]
+        break if locked_old.nil? || (Time.now - t_start) > opts[:timeout_lock]
         sleep opts[:interval_check]
       end
 
-      decr_concurrency(name)
+      if @conf[:concurrency_count]
+        decr_concurrency(name)
+      end
 
       is_locked = locked_old == 1 ? 0 : 1
       is_locked
