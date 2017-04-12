@@ -8,7 +8,6 @@ module Pesto
 
       @conf = {
         :lock_expire => false,
-        :timeout_concurrency_expire => 60,
         :timeout_lock_expire => 300,
         :timeout_lock => 90,
         :interval_check => 0.05,
@@ -22,30 +21,7 @@ module Pesto
       @ctx[:redis]
     end
 
-    def get_concurrency(name)
-      hash = ccc_hash(name) 
-      res = rc.get(hash) || 0
-      res.to_i
-    end
-
-    def incr_concurrency(name)
-      hash = ccc_hash(name) 
-
-      rc.pipelined do
-        rc.incr(hash)
-        rc.expire(hash, @conf[:timeout_concurrency_expire])
-      end
-    end
-
-    def decr_concurrency(name)
-      hash = ccc_hash(name) 
-      rc.pipelined do
-        rc.decr(hash)
-        rc.expire(hash, @conf[:timeout_concurrency_expire])
-      end
-    end
-
-    def lock(name = 'global', _opts = {})
+    def lock(_names, _opts = {})
       opts = {}.merge(
         @conf.select{ |k| [
           :timeout_lock_expire, :timeout_lock,
@@ -53,42 +29,56 @@ module Pesto
         ].include?(k) 
         }
       ).merge(_opts || {})
-
-      if @conf[:concurrency_count]
-        if opts[:concurrency_limit] > 0
-          ccc = get_concurrency(name)
-          return 0 if ccc > opts[:concurrency_limit]
-        end
-
-        incr_concurrency(name)
-      end
-
-      chash = lock_hash(name)
-      locked_old = 1
-
+     
+      _names = [_names] if _names.is_a?(String)
+      names = _names.uniq
+      
+      opts[:timeout_lock_expire] = (opts[:timeout_lock_expire] + (opts[:timeout_lock] * names.size)).to_i
+               
       t_start = Time.now
+      locked = 0
 
-      while locked_old
-        is_set = rc.setnx chash, 1
-        
-        if is_set
-          if @conf[:lock_expire]
-            rc.expire chash, opts[:timeout_lock_expire]
+      while true 
+        locked = 0
+
+        res = rc.pipelined do 
+          names.each do |n|
+            chash = lock_hash(n)
+            rc.setnx chash, 1
           end
-          locked_old = nil
-          break
         end
 
-        break if (Time.now - t_start) > opts[:timeout_lock]
+        locks = []
+
+        names.each_with_index do |n, ix|
+          l = res[ix]
+          next if !l
+          locked += 1
+          locks << n
+        end
+
+        if locked == names.size
+          locked = 1
+
+          if @conf[:lock_expire]
+            res = rc.pipelined do 
+              names.each do |n|
+                chash = lock_hash(n)
+                rc.expire chash, opts[:timeout_lock_expire]
+              end
+            end
+          end
+        else
+          locked = 0
+        end
+
+        break if locked == 1 || (Time.now - t_start) > opts[:timeout_lock]
+
+        unlock(locks)
         sleep opts[:interval_check]
       end
 
-      if @conf[:concurrency_count]
-        decr_concurrency(name)
-      end
-
-      is_locked = locked_old == 1 ? 0 : 1
-      is_locked
+      locked == 0 ? 0 : 1
     end
 
     def locki(name = 'global', _opts = {})
@@ -105,52 +95,32 @@ module Pesto
     end
 
     def lockm(_names = [], opts = {})
+      lock(_names, opts)
+    end
+
+    def unlock(_names)
+      _names = [_names] if _names.is_a?(String)
       names = _names.uniq
-      opts[:timeout_lock_expire] = opts[:timeout_lock_expire] || 300
-      opts[:timeout_lock] = opts[:timeout_lock] || 65
-      opts[:timeout_lock_expire] = (opts[:timeout_lock_expire] + (opts[:timeout_lock] * names.size)).to_i
 
-      locks = []
-      valid = true
-
-      names.each do |n|
-        l = lock(n, opts)
-  
-        if l != 1
-          valid = false
-          break
+      res = rc.pipelined do
+        names.each do |n|
+          rc.del(lock_hash(n))
         end
-  
-        locks << n
-      end
-
-      if !valid
-        unlockm(locks)
-      end
-
-      return valid ? 1 : 0
-    end
-
-    def unlock(name)
-      rc.del(lock_hash(name))
-    end
-
-    def unlockm(_names)
-      names = _names.uniq
-      val = 0
-
-      names.each do |n|
-        val += unlock(n)
       end
       
+      val = 0
+      res.each do |v| 
+        val += v
+      end
+
       val > 0 ? 1 : 0
     end
 
-    private
-
-    def ccc_hash(name)
-      "pesto:concurrency:#{name}"
+    def unlockm(_names)
+      unlock(_names)
     end
+
+    private
 
     def lock_hash(name)
       "pesto:lock:#{name}"

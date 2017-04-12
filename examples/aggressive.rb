@@ -4,7 +4,7 @@ require 'securerandom'
 require_relative '../lib/pesto.rb'
 
 $key_num = 2
-$concurrency = 4
+$concurrency = 5
 
 def lock(ctx, pfx, pid = 0)
   pl = Pesto::Lock.new({ :redis => ctx[:redis], :verbose => true })
@@ -20,10 +20,10 @@ def lock(ctx, pfx, pid = 0)
 
   d1 = Time.now
 
-  locked = pl.lockm(keys, { :timeout_lock => 0.005, :interval_check => 0.005 })
+  locked = pl.lock(keys, { :timeout_lock => 0.05, :interval_check => 0.005 })
 
   if locked == 1
-    pl.unlockm(keys)
+    pl.unlock(keys)
     puts "[#{pid}] lock acquired/dismissed (took: #{(Time.now - d1) * 1000}ms)"
   else
     puts "[#{pid}] lock failed"
@@ -50,7 +50,7 @@ for pid in 0..$concurrency
     while true do
       lock({ :redis => redis }, pfx, pid)
       delay = rand(1000).to_f / 10000.0
-      sleep delay
+      #sleep delay
     end
   end
 end
