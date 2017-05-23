@@ -8,12 +8,10 @@ $concurrency = 5
 
 def lock(ctx, pfx, pid = 0)
   pl = Pesto::Lock.new({ :redis => ctx[:redis], :verbose => true })
-  kl = "pesto:#{pfx}"
-
   keys = []
 
   for i in 0..$key_num
-    keys << "#{kl}:#{i}"
+    keys << "pesto:#{pfx}:#{i}"
   end
 
   keys.shuffle!
@@ -26,7 +24,7 @@ def lock(ctx, pfx, pid = 0)
     pl.unlock(keys)
     puts "[#{pid}] lock acquired/dismissed (took: #{(Time.now - d1) * 1000}ms)"
   else
-    puts "[#{pid}] lock failed"
+    #puts "[#{pid}] lock failed"
   end
 end
 
