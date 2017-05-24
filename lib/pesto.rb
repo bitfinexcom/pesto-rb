@@ -12,7 +12,6 @@ module Pesto
         :timeout_lock => 90,
         :interval_check => 0.05
       }.merge(opts)
-
     end
 
     def rc
@@ -39,30 +38,37 @@ module Pesto
       while true 
         locked = 0
 
-        res = rc.pipelined do 
-          names.each do |n|
-            chash = lock_hash(n)
-            rc.setnx chash, 1
+        lock_req = nil
+        rc.with do |rc|
+          lock_req = rc.pipelined do 
+            names.each do |n|
+              chash = lock_hash(n)
+              rc.setnx chash, 1
+            end
           end
         end
 
         locks = []
 
-        names.each_with_index do |n, ix|
-          l = res[ix]
-          next if !l
-          locked += 1
-          locks << n
+        if lock_req
+          names.each_with_index do |n, ix|
+            l = lock_req[ix]
+            next if !l
+            locked += 1
+            locks << n
+          end
         end
 
         if locked == names.size
           locked = 1
 
           if @conf[:lock_expire]
-            res = rc.pipelined do 
-              names.each do |n|
-                chash = lock_hash(n)
-                rc.expire chash, opts[:timeout_lock_expire]
+            rc.with do |rc|
+              rc.pipelined do 
+                names.each do |n|
+                  chash = lock_hash(n)
+                  rc.expire chash, opts[:timeout_lock_expire]
+                end
               end
             end
           end
@@ -100,15 +106,21 @@ module Pesto
       _names = [_names] if _names.is_a?(String)
       names = _names.uniq
 
-      res = rc.pipelined do
-        names.each do |n|
-          rc.del(lock_hash(n))
+      unlock_req = nil
+      rc.with do |rc|
+        unlock_req = rc.pipelined do
+          names.each do |n|
+            rc.del(lock_hash(n))
+          end
         end
       end
-      
+
       val = 0
-      res.each do |v| 
-        val += v
+      
+      if unlock_req
+        unlock_req.each do |v| 
+          val += v
+        end
       end
 
       val > 0 ? 1 : 0

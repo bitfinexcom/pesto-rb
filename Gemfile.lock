@@ -7,6 +7,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     coderay (1.1.1)
+    connection_pool (2.2.1)
     diff-lcs (1.2.5)
     docile (1.1.5)
     hiredis (0.6.1)
@@ -16,7 +17,7 @@ GEM
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
       slop (~> 3.4)
-    redis (3.3.2)
+    redis (3.3.3)
     rspec (3.5.0)
       rspec-core (~> 3.5.0)
       rspec-expectations (~> 3.5.0)
@@ -41,10 +42,11 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  connection_pool
   hiredis
   pesto!
   pry
-  redis (~> 3.3.0)
+  redis (~> 3.3.3)
   rspec
   simplecov
 
