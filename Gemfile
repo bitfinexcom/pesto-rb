@@ -7,5 +7,5 @@ group :test do
   gem 'simplecov', :require => false
 
   gem 'hiredis'
-  gem 'redis', '~> 3.3.0'
+  gem 'redis', '~> 3.3.3'
 end
