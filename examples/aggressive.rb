@@ -18,13 +18,13 @@ def lock(ctx, pfx, pid = 0)
 
   d1 = Time.now
 
-  locked = pl.lock(keys, { :timeout_lock => 0.05, :interval_check => 0.005 })
+  locked = pl.lock(keys, timeout_lock: 0.05, interval_check: 0.005 )
 
   if locked == 1
     pl.unlock(keys)
     puts "[#{pid}] lock acquired/dismissed (took: #{(Time.now - d1) * 1000}ms)"
   else
-    #puts "[#{pid}] lock failed"
+    puts "[#{pid}] lock failed"
   end
 end
 

@@ -15,7 +15,12 @@ describe Pesto::Lock do
   end
 
   describe "lock" do
-    it {expect(pl.lock
+    let(:rd) { double(:redis) }
+    context "locking a single key" do
+      before do
+
+      end
+    end
   end
 
 end

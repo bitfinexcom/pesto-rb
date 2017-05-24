@@ -38,49 +38,49 @@ module Pesto
       opts[:timeout_lock_expire] += opts[:timeout_lock] * names.size
 
       t_start = Time.now
-      locked = 0
 
       while true
-        locked = 0
+        res, locks, stop = get_locks names
 
-        res = rc.pipelined do
-          names.each do |n|
-            chash = lock_hash(n)
-            rc.setnx chash, 1
-          end
-        end
-
-        locks = []
-
-        names.each_with_index do |n, ix|
-          l = res[ix]
-          next if !l
-          locked += 1
-          locks << n
-        end
-
-        if locked == names.size
-          locked = 1
-
+        if !stop
           if conf[:lock_expire]
-            res = rc.pipelined do
+            rc.pipelined do
               names.each do |n|
                 chash = lock_hash(n)
                 rc.expire chash, opts[:timeout_lock_expire]
               end
             end
           end
-        else
-          locked = 0
         end
 
-        break if locked == 1 || (Time.now - t_start) > opts[:timeout_lock]
+        break if stop || (Time.now - t_start) > opts[:timeout_lock]
 
         unlock(locks)
         sleep opts[:interval_check]
       end
 
-      locked == 0 ? 0 : 1
+      stop ? 1 : 0
+    end
+
+
+    def get_locks names
+      locked = 0
+      locks = []
+
+      res = rc.pipelined do
+        names.each do |n|
+          chash = lock_hash(n)
+          rc.setnx chash, 1
+        end
+      end
+
+      names.each_with_index do |n, ix|
+        next if res[ix].nil?
+        locked += 1
+        locks << n
+      end
+
+      return [res, locks, locked == names.size]
     end
 
     def locki(name = 'global', opts = {})
@@ -98,8 +98,9 @@ module Pesto
       lock(_names, opts)
     end
 
-    def unlock(*names)
-      names.uniq!
+    def unlock(_names = [])
+      _names = [_names] if _names.is_a?(String)
+      names = _names.uniq
 
       res = rc.pipelined do
         names.each do |n|
@@ -107,10 +108,7 @@ module Pesto
         end
       end
 
-      val = 0
-      res.each do |v|
-        val += v
-      end
+      val = res.reduce(0){|sum,n| sum+n}
 
       val > 0 ? 1 : 0
     end
