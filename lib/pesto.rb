@@ -98,10 +98,6 @@ module Pesto
       raise "#{err} (#{name})"
     end
 
-    def lockm(_names = [], opts = {})
-      lock(_names, opts)
-    end
-
     def unlock(_names)
       _names = [_names] if _names.is_a?(String)
       names = _names.uniq
@@ -124,10 +120,6 @@ module Pesto
       end
 
       val > 0 ? 1 : 0
-    end
-
-    def unlockm(_names)
-      unlock(_names)
     end
 
     private
