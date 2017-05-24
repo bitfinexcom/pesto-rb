@@ -10,9 +10,7 @@ module Pesto
         :lock_expire => false,
         :timeout_lock_expire => 300,
         :timeout_lock => 90,
-        :interval_check => 0.05,
-        :concurrency_limit => 0,
-        :concurrency_count => false
+        :interval_check => 0.05
       }.merge(opts)
 
     end
@@ -25,7 +23,7 @@ module Pesto
       opts = {}.merge(
         @conf.select{ |k| [
           :timeout_lock_expire, :timeout_lock,
-          :interval_check, :concurrency_limit
+          :interval_check
         ].include?(k) 
         }
       ).merge(_opts || {})
