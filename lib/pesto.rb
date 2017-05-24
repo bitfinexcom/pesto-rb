@@ -7,9 +7,9 @@ module Pesto
       raise 'ERR_REDIS_NOTFOUND' if @ctx[:redis].nil?
 
       @conf = {
-        :lock_expire => false,
-        :timeout_lock_expire => 300,
-        :timeout_lock => 90,
+        :lock_expire => true,
+        :timeout_lock_expire => 5,
+        :timeout_lock => 1,
         :interval_check => 0.05
       }.merge(opts)
     end
