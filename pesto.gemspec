@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.name        = 'pesto'
   s.version     = Pesto::VERSION
   s.summary     = 'dlock'
-  s.description = s.summary
+  s.summary     = 'distributed locking with deadlock prevention'
   s.authors     = ['bfx devs']
   s.email       = 'info@bitfinex.com'
   s.homepage    = 'https://www.bitfinex.com'
