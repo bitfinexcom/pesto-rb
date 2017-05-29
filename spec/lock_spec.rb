@@ -29,7 +29,7 @@ describe Pesto::Lock do
 
   describe "lock" do
     context "without conflicts" do
-      before { redis.setnx("pesto:lock:not_working", 0)}
+      before { redis.del("pesto:lock:working")}
       it { expect(pl.lock("working")).to eq(1) }
     end
 

@@ -55,7 +55,7 @@ module Pesto
       cp.with do |rc|
         rc.pipelined do
           names.each do |n|
-            rc.expire lock_hash(n), opts[:timeout_lock_expire]
+            rc.expire lock_hash(n), opts[:timeout_lock_expire].to_i
           end
         end
       end
