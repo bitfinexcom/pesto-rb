@@ -48,7 +48,7 @@ for pid in 0..$concurrency
     while true do
       lock({ :redis => redis }, pfx, pid)
       delay = rand(1000).to_f / 10000.0
-      #sleep delay
+      sleep delay
     end
   end
 end

@@ -10,6 +10,8 @@ GEM
   specs:
     diff-lcs (1.3)
     docile (1.1.5)
+    fakeredis (0.6.0)
+      redis (~> 3.2)
     hiredis (0.6.1)
     json (2.1.0)
     redis (3.3.3)
@@ -36,6 +38,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  fakeredis (~> 0.6.0)
   pesto!
   rspec (~> 3.6.0)
   simplecov (~> 0.14.1)

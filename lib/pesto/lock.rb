@@ -7,12 +7,10 @@ module Pesto
       raise 'ERR_REDIS_NOTFOUND' if @ctx[:redis].nil?
 
       @conf = {
-        :lock_expire => false,
-        :timeout_lock_expire => 300,
-        :timeout_lock => 90,
-        :interval_check => 0.05,
-        :concurrency_limit => 0,
-        :concurrency_count => false
+        :lock_expire => true,
+        :timeout_lock_expire => 5,
+        :timeout_lock => 1,
+        :interval_check => 0.05
       }.merge(opts)
     end
 
@@ -42,16 +40,7 @@ module Pesto
       while true
         res, locks, stop = get_locks names
 
-        if !stop
-          if conf[:lock_expire]
-            rc.pipelined do
-              names.each do |n|
-                chash = lock_hash(n)
-                rc.expire chash, opts[:timeout_lock_expire]
-              end
-            end
-          end
-        end
+        expire names, opts if !stop && conf[:lock_expire]
 
         break if stop || (Time.now - t_start) > opts[:timeout_lock]
 
@@ -62,6 +51,13 @@ module Pesto
       stop ? 1 : 0
     end
 
+    def expire names, opts={}
+      rc.pipelined do
+        names.each do |n|
+          rc.expire lock_hash(n), opts[:timeout_lock_expire]
+        end
+      end
+    end
 
     def get_locks names
       locked = 0
@@ -69,15 +65,14 @@ module Pesto
 
       res = rc.pipelined do
         names.each do |n|
-          chash = lock_hash(n)
-          rc.setnx chash, 1
+          rc.setnx lock_hash(n), 1
         end
       end
 
       names.each_with_index do |n, ix|
-        next if res[ix].nil?
+        next unless res[ix]
         locked += 1
-        locks << n
+        locks.push n
       end
 
       return [res, locks, locked == names.size]
