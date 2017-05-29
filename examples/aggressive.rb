@@ -4,8 +4,9 @@ require 'redis'
 require 'securerandom'
 require_relative '../lib/pesto.rb'
 
+$use_sleep = false
 $key_num = 20
-$concurrency = 5
+$concurrency = 10
 
 def lock(ctx, pfx, pid = 0)
   pl = Pesto::Lock.new({ :pool => ctx[:pool], :verbose => true })
@@ -47,9 +48,11 @@ for pid in 0..$concurrency
   children << fork do
     redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new(:driver => :hiredis) }
     while true do
-      lock({ :pool => pool }, pfx, pid)
-      delay = rand(1000).to_f / 10000.0
-      sleep delay
+      lock({ :pool => redis }, pfx, pid)
+      if use_sweep
+        delay = rand(1000).to_f / 10000.0
+        sleep delay
+      end
     end
   end
 end
