@@ -4,7 +4,7 @@ module Pesto
     def initialize(ctx = {}, opts = {})
       @ctx = ctx
 
-      raise 'ERR_REDIS_NOTFOUND' if @ctx[:redis].nil?
+      raise 'ERR_REDIS_NOTFOUND' if @ctx[:pool].nil?
 
       @conf = {
         :lock_expire => true,
@@ -18,8 +18,8 @@ module Pesto
       @conf
     end
 
-    def rc
-      @ctx[:redis]
+    def cp
+      @ctx[:pool]
     end
 
     def merge_options o = {}, *filter
@@ -52,9 +52,11 @@ module Pesto
     end
 
     def expire names, opts={}
-      rc.pipelined do
-        names.each do |n|
-          rc.expire lock_hash(n), opts[:timeout_lock_expire]
+      cp.with do |rc|
+        rc.pipelined do
+          names.each do |n|
+            rc.expire lock_hash(n), opts[:timeout_lock_expire]
+          end
         end
       end
     end
@@ -62,17 +64,20 @@ module Pesto
     def get_locks names
       locked = 0
       locks = []
+      res = []
 
-      res = rc.pipelined do
-        names.each do |n|
-          rc.setnx lock_hash(n), 1
+      cp.with do |rc|
+        res = rc.pipelined do
+          names.each do |n|
+            rc.setnx lock_hash(n), 1
+          end
         end
-      end
 
-      names.each_with_index do |n, ix|
-        next unless res[ix]
-        locked += 1
-        locks.push n
+        names.each_with_index do |n, ix|
+          next unless res[ix]
+          locked += 1
+          locks.push n
+        end
       end
 
       return [res, locks, locked == names.size]
@@ -96,10 +101,13 @@ module Pesto
     def unlock(_names = [])
       _names = [_names] if _names.is_a?(String)
       names = _names.uniq
+      res = []
 
-      res = rc.pipelined do
-        names.each do |n|
-          rc.del(lock_hash(n))
+      cp.with do |rc|
+        res = rc.pipelined do
+          names.each do |n|
+            rc.del(lock_hash(n))
+          end
         end
       end
 

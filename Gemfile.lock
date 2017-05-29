@@ -1,13 +1,15 @@
 PATH
   remote: .
   specs:
-    pesto (0.0.1)
+    pesto (0.0.5)
+      connection_pool (~> 2.2.1)
       hiredis (~> 0.6.0)
       redis (~> 3.3.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
+    connection_pool (2.2.1)
     diff-lcs (1.3)
     docile (1.1.5)
     fakeredis (0.6.0)

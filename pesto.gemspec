@@ -15,6 +15,7 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency "hiredis", "~> 0.6.0"
   s.add_runtime_dependency "redis", "~> 3.3.0"
+  s.add_runtime_dependency "connection_pool", "~> 2.2.1"
 
   s.add_development_dependency "rspec", "~> 3.6.0"
   s.add_development_dependency "fakeredis", "~> 0.6.0"
