@@ -2,9 +2,9 @@ PATH
   remote: .
   specs:
     pesto (0.0.7)
-      connection_pool (~> 2.2.1)
-      hiredis (~> 0.6.0)
-      redis (~> 3.3.0)
+      connection_pool (~> 2.2)
+      hiredis (~> 0.6)
+      redis (~> 3.3)
 
 GEM
   remote: https://rubygems.org/
@@ -40,10 +40,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  fakeredis (~> 0.6.0)
+  fakeredis (~> 0.6)
   pesto!
-  rspec (~> 3.6.0)
-  simplecov (~> 0.14.1)
+  rspec (~> 3.6)
+  simplecov (~> 0.14)
 
 BUNDLED WITH
    1.13.6
