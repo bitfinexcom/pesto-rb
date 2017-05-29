@@ -8,20 +8,18 @@ $key_num = 20
 $concurrency = 5
 
 def lock(ctx, pfx, pid = 0)
-  pl = Pesto::Lock.new({ :redis => ctx[:redis], :verbose => true })
-  kl = "pesto:#{pfx}"
-
+  pl = Pesto::Lock.new({ :pool => ctx[:pool], :verbose => true })
   keys = []
 
   for i in 0..$key_num
-    keys << "#{kl}:#{i}"
+    keys << "pesto:#{pfx}:#{i}"
   end
 
   keys.shuffle!
 
   d1 = Time.now
 
-  locked = pl.lock(keys, { :timeout_lock => 0.05, :interval_check => 0.005 })
+  locked = pl.lock(keys, timeout_lock: 0.05, interval_check: 0.005 )
 
   if locked == 1
     pl.unlock(keys)
@@ -49,9 +47,9 @@ for pid in 0..$concurrency
   children << fork do
     redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new(:driver => :hiredis) }
     while true do
-      lock({ :redis => redis }, pfx, pid)
+      lock({ :pool => pool }, pfx, pid)
       delay = rand(1000).to_f / 10000.0
-      #sleep delay
+      sleep delay
     end
   end
 end
