@@ -28,8 +28,8 @@ module Pesto
       c
     end
 
-    def lock(_names, _opts = {})
-      opts = merge_options(_opts, :timeout_lock_expire, :timeout_lock, :interval_check, :concurrency_limit)
+    def lock _names, _opts = {}
+      opts = merge_options _opts, :timeout_lock_expire, :timeout_lock, :interval_check
 
       names = (_names.is_a?(String) ? [_names] : _names).uniq
       opts[:timeout_lock_expire] = opts[:timeout_lock_expire].to_i
@@ -44,7 +44,7 @@ module Pesto
 
         break if stop || (Time.now - t_start) > opts[:timeout_lock]
 
-        unlock(locks)
+        unlock locks
         sleep opts[:interval_check]
       end
 
@@ -83,22 +83,18 @@ module Pesto
       return [res, locks, locked == names.size]
     end
 
-    def locki(name = 'global', opts = {})
+    def locki name = 'global', opts = {}
       lock name, opts.merge(timeout_lock: 0)
     end
 
-    def lockx(name = 'global', opts = {}, err = 'ERR_LOCKING')
+    def lockx name = 'global', opts = {}, err = 'ERR_LOCKING'
       locked = lock(name, opts)
       return 1 if locked == 1
 
       raise "#{err} (#{name})"
     end
 
-    def lockm(_names = [], opts = {})
-      lock(_names, opts)
-    end
-
-    def unlock(_names = [])
+    def unlock _names = []
       _names = [_names] if _names.is_a?(String)
       names = _names.uniq
       res = []
@@ -116,13 +112,9 @@ module Pesto
       val > 0 ? 1 : 0
     end
 
-    def unlockm(_names)
-      unlock(_names)
-    end
-
     private
 
-    def lock_hash(name)
+    def lock_hash name
       "pesto:lock:#{name}"
     end
 
