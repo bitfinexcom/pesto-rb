@@ -40,7 +40,7 @@ module Pesto
       while true
         res, locks, stop = get_locks names
 
-        expire names, opts if !stop && conf[:lock_expire]
+        expire names, opts if stop && conf[:lock_expire]
 
         break if stop || (Time.now - t_start) > opts[:timeout_lock]
 
