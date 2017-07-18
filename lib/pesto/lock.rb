@@ -12,6 +12,28 @@ module Pesto
         :timeout_lock => 1,
         :interval_check => 0.05
       }.merge(opts)
+
+      load_scripts
+    end
+
+    def load_scripts
+      cp.with do |rc|
+        @script_sha = rc.script(
+          :load,
+          "local timeout = tonumber(ARGV[1])
+          assert(type(timeout) == 'number', 'timeout expects a number') \
+
+          if redis.call('setnx', KEYS[1], 1) == 1 then \
+            if tonumber(ARGV[1]) > -1 then \
+              redis.call('expire', KEYS[1], timeout) \
+            end
+            return 1 \
+          else \
+            return 0 \
+          end"
+        )
+        puts @script_sha
+      end
     end
 
     def conf
@@ -33,14 +55,14 @@ module Pesto
 
       names = (_names.is_a?(String) ? [_names] : _names).uniq
       opts[:timeout_lock_expire] = opts[:timeout_lock_expire].to_i
-      opts[:timeout_lock_expire] += opts[:timeout_lock] * names.size
+      opts[:timeout_lock_expire] += (opts[:timeout_lock] * names.size).ceil.to_i
 
       t_start = Time.now
 
       while true
-        res, locks, stop = get_locks names
-
-        expire names, opts if stop && conf[:lock_expire]
+        res, locks, stop = get_locks names, {
+          :timeout_lock_expire => opts[:timeout_lock_expire]
+        }
 
         break if stop || (Time.now - t_start) > opts[:timeout_lock]
 
@@ -51,30 +73,25 @@ module Pesto
       stop ? 1 : 0
     end
 
-    def expire names, opts={}
-      cp.with do |rc|
-        rc.pipelined do
-          names.each do |n|
-            rc.expire lock_hash(n), opts[:timeout_lock_expire].to_i
-          end
-        end
-      end
-    end
-
-    def get_locks names
+    def get_locks names, opts = {}
       locked = 0
       locks = []
       res = []
 
+      timeout_lock_expire = conf[:lock_expire] ? opts[:timeout_lock_expire] : -1
+
       cp.with do |rc|
         res = rc.pipelined do
           names.each do |n|
-            rc.setnx lock_hash(n), 1
+            rc.evalsha(@script_sha, {
+              :keys => [lock_hash(n)],
+              :argv => [timeout_lock_expire]
+            })
           end
         end
 
         names.each_with_index do |n, ix|
-          next unless res[ix]
+          next if res[ix] != 1
           locked += 1
           locks.push n
         end

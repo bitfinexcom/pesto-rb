@@ -49,7 +49,7 @@ for pid in 0..$concurrency
     redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new(:driver => :hiredis) }
     while true do
       lock({ :pool => redis }, pfx, pid)
-      if use_sweep
+      if $use_sleep
         delay = rand(1000).to_f / 10000.0
         sleep delay
       end

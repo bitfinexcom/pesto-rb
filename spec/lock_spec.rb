@@ -16,17 +16,6 @@ describe Pesto::Lock do
     it { expect(pl.merge_options({value1: 1, value2: 2}, :value1)).to eq({value1: 1}) }
   end
 
-  describe "expire" do
-    context "locking a single key" do
-      let(:names) { [:a,:b] }
-      before do
-        expect(pool).to receive(:with).and_return(1)
-      end
-
-      it { expect(pl.expire(names)).to eq(1) }
-    end
-  end
-
   describe "lock" do
     context "without conflicts" do
       before { redis.del("pesto:lock:working")}
