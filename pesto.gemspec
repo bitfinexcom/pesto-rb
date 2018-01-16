@@ -14,10 +14,10 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_runtime_dependency "hiredis", "~> 0.6"
-  s.add_runtime_dependency "redis", "~> 3.3"
+  s.add_runtime_dependency "redis", "~> 4.0"
   s.add_runtime_dependency "connection_pool", "~> 2.2"
 
   s.add_development_dependency "rspec", "~> 3.6"
-  s.add_development_dependency "fakeredis", "~> 0.6"
+  s.add_development_dependency "fakeredis", "~> 0.1.4"
   s.add_development_dependency "simplecov", "~> 0.14"
 end
