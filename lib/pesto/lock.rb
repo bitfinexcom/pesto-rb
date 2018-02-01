@@ -19,16 +19,15 @@ module Pesto
       cp.with do |rc|
         @script_sha = rc.script(
           :load,
-          "local timeout = tonumber(ARGV[1])
-          if type(timeout) ~= 'number' then \
-            return 0 \
-          end \
-          if redis.call('setnx', KEYS[1], 1) == 1 then \
-            redis.call('expire', KEYS[1], timeout) \
-            return 1 \
+          "local ret = 0
+          local res = redis.call('setnx', KEYS[1], 1)
+          if res == 1 then \
+            redis.call('expire', KEYS[1], ARGV[1]) \
+            ret = 1 \
           else \
-            return 0 \
-          end"
+            ret = 0 \
+          end \
+          return ret"
         )
       end
     end
@@ -55,6 +54,7 @@ module Pesto
       opts[:timeout_lock_expire] += (opts[:timeout_lock] * names.size).ceil.to_i
 
       t_start = Time.now
+      stop = false
 
       while true
         res, locks, stop = get_locks names, {
@@ -78,22 +78,20 @@ module Pesto
       timeout_lock_expire = opts[:timeout_lock_expire]
 
       cp.with do |rc|
-        res = rc.pipelined do
+        res = rc.multi do
           names.each do |n|
-            rc.evalsha(@script_sha, {
+            res << rc.evalsha(@script_sha, {
               :keys => [lock_hash(n)],
               :argv => [timeout_lock_expire]
             })
           end
         end
+      end
 
-        puts "res:#{res.join(',')}"
-
-        names.each_with_index do |n, ix|
-          next if res[ix] != 1
-          locked += 1
-          locks.push n
-        end
+      names.each_with_index do |n, ix|
+        next if res[ix] != 1
+        locked += 1
+        locks.push n
       end
 
       return [res, locks, locked == names.size]
@@ -116,14 +114,14 @@ module Pesto
       res = []
 
       cp.with do |rc|
-        res = rc.pipelined do
+        res = rc.multi do
           names.each do |n|
             rc.del(lock_hash(n))
           end
         end
       end
 
-      val = res.reduce(0){|sum,n| sum+n}
+      val = res.reduce(0){|sum, n| sum + n}
 
       val > 0 ? 1 : 0
     end

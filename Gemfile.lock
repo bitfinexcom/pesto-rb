@@ -3,7 +3,7 @@ PATH
   specs:
     pesto (0.0.12)
       connection_pool (~> 2.2)
-      redis (~> 4.0)
+      redis (~> 4.0.1)
 
 GEM
   remote: https://rubygems.org/

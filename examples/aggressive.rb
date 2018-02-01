@@ -8,7 +8,7 @@ $key_num = 5
 $concurrency = 10
 
 def lock(ctx, pfx, pid = 0)
-  pl = Pesto::Lock.new({ :pool => ctx[:pool], :verbose => true })
+  pl = Pesto::Lock.new({ :pool => ctx[:pool] })
   keys = []
 
   for i in 0..$key_num
@@ -45,7 +45,7 @@ Signal.trap('TERM')  { killall(children) }
 for pid in 0..$concurrency
   puts "[#{pid}] fork"
   children << fork do
-    redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new }
+    redis = ConnectionPool.new(size: 3, :timeout => 10) { Redis.new }
     while true do
       lock({ :pool => redis }, pfx, pid)
       if $use_sleep
