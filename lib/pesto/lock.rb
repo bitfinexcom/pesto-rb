@@ -7,7 +7,6 @@ module Pesto
       raise 'ERR_REDIS_NOTFOUND' if @ctx[:pool].nil?
 
       @conf = {
-        :lock_expire => true,
         :timeout_lock_expire => 5,
         :timeout_lock => 1,
         :interval_check => 0.05
@@ -21,18 +20,16 @@ module Pesto
         @script_sha = rc.script(
           :load,
           "local timeout = tonumber(ARGV[1])
-          assert(type(timeout) == 'number', 'timeout expects a number') \
-
+          if type(timeout) ~= 'number' then \
+            return 0 \
+          end \
           if redis.call('setnx', KEYS[1], 1) == 1 then \
-            if tonumber(ARGV[1]) > -1 then \
-              redis.call('expire', KEYS[1], timeout) \
-            end
+            redis.call('expire', KEYS[1], timeout) \
             return 1 \
           else \
             return 0 \
           end"
         )
-        puts @script_sha
       end
     end
 
@@ -78,7 +75,7 @@ module Pesto
       locks = []
       res = []
 
-      timeout_lock_expire = conf[:lock_expire] ? opts[:timeout_lock_expire] : -1
+      timeout_lock_expire = opts[:timeout_lock_expire]
 
       cp.with do |rc|
         res = rc.pipelined do

@@ -5,7 +5,7 @@ require 'securerandom'
 require_relative '../lib/pesto.rb'
 
 $use_sleep = false
-$key_num = 20
+$key_num = 5
 $concurrency = 10
 
 def lock(ctx, pfx, pid = 0)
