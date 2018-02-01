@@ -19,8 +19,12 @@ module Pesto
       cp.with do |rc|
         @script_sha = rc.script(
           :load,
-          "local ret = 0
-          local res = redis.call('setnx', KEYS[1], 1)
+          "local ret = 0 \
+          local timeout = tonumber(ARGV[1]) \
+          if type(timeout) ~= 'number' then \
+            return 0 \
+          end \
+          local res = redis.call('setnx', KEYS[1], 1) \
           if res == 1 then \
             redis.call('expire', KEYS[1], ARGV[1]) \
             ret = 1 \
