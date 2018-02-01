@@ -87,6 +87,8 @@ module Pesto
           end
         end
 
+        puts "res:#{res.join(',')}"
+
         names.each_with_index do |n, ix|
           next if res[ix] != 1
           locked += 1

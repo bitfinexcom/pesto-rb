@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   s.require_paths = ["lib"]
 
-  s.add_runtime_dependency "hiredis", "~> 0.6"
   s.add_runtime_dependency "redis", "~> 4.0"
   s.add_runtime_dependency "connection_pool", "~> 2.2"
 

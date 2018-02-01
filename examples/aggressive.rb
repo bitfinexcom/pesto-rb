@@ -1,5 +1,4 @@
 require 'connection_pool'
-require 'hiredis'
 require 'redis'
 require 'securerandom'
 require_relative '../lib/pesto.rb'
@@ -46,7 +45,7 @@ Signal.trap('TERM')  { killall(children) }
 for pid in 0..$concurrency
   puts "[#{pid}] fork"
   children << fork do
-    redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new(:driver => :hiredis) }
+    redis = ConnectionPool.new(size: 5, :timeout => 10) { Redis.new }
     while true do
       lock({ :pool => redis }, pfx, pid)
       if $use_sleep
