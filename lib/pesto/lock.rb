@@ -82,9 +82,9 @@ module Pesto
       timeout_lock_expire = opts[:timeout_lock_expire]
 
       cp.with do |rc|
-        res = rc.multi do
+        res = rc.multi do |pipeline|
           names.each do |n|
-            res << rc.evalsha(@script_sha, {
+            res << pipeline.evalsha(@script_sha, {
               :keys => [lock_hash(n)],
               :argv => [timeout_lock_expire]
             })
@@ -118,9 +118,9 @@ module Pesto
       res = []
 
       cp.with do |rc|
-        res = rc.multi do
+        res = rc.multi do |pipeline|
           names.each do |n|
-            rc.del(lock_hash(n))
+            pipeline.del(lock_hash(n))
           end
         end
       end
